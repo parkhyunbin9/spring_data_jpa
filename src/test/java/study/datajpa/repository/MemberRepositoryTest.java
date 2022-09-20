@@ -131,4 +131,30 @@ class MemberRepositoryTest {
             System.out.println("member = " + member);
         }
     }
+
+    @Test
+    public void returnType() {
+        Member m1 = new Member("AAA", 10);
+        Member m2 = new Member("AAA", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        List<Member> aaa = memberRepository.findListByUsername("AAA");
+        Member findMember = memberRepository.findMemberByUsername("AAA");
+        Optional<Member> optionalMember = memberRepository.findOptionalMemberByUsername("AAA");
+        for (Member member : aaa) {
+            System.out.println("member = " + member);
+        }
+        System.out.println("findMember = " + findMember);
+        System.out.println("optionalMember = " + optionalMember.get());
+
+        List<Member> emptyCollection = memberRepository.findListByUsername("adfadfalefjielsjef"); // return empty Collection
+        System.out.println("emptyCollection = " + emptyCollection.size());
+
+        Member nullUser = memberRepository.findMemberByUsername("adfadfalefjielsjef"); // return null
+        System.out.println("nullUser = " + nullUser);
+        Optional<Member> optionalFindMember = memberRepository.findOptionalMemberByUsername("adfadfalefjielsjef"); // Optional.empty
+        System.out.println("optionalFindMember = " + optionalFindMember);
+    }
 }
