@@ -4,12 +4,17 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
 import study.datajpa.entity.Team;
 
+import javax.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -19,14 +24,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
-@Rollback(value = false)
 class MemberRepositoryTest {
 
     @Autowired
     MemberRepository memberRepository;
     @Autowired
     TeamRepository teamRepository;
-
+    @Autowired
+    EntityManager em;
     @Test
     public void testMember() {
         System.out.println("memberRepository.getClass() = " + memberRepository.getClass());
@@ -135,13 +140,13 @@ class MemberRepositoryTest {
     @Test
     public void returnType() {
         Member m1 = new Member("AAA", 10);
-        Member m2 = new Member("AAA", 20);
+        Member m2 = new Member("AAAA", 20);
 
         memberRepository.save(m1);
         memberRepository.save(m2);
 
         List<Member> aaa = memberRepository.findListByUsername("AAA");
-        Member findMember = memberRepository.findMemberByUsername("AAA");
+        List<Member> findMember = memberRepository.findListByUsername("AAA");
         Optional<Member> optionalMember = memberRepository.findOptionalMemberByUsername("AAA");
         for (Member member : aaa) {
             System.out.println("member = " + member);
@@ -156,5 +161,87 @@ class MemberRepositoryTest {
         System.out.println("nullUser = " + nullUser);
         Optional<Member> optionalFindMember = memberRepository.findOptionalMemberByUsername("adfadfalefjielsjef"); // Optional.empty
         System.out.println("optionalFindMember = " + optionalFindMember);
+    }
+
+    @Test
+    public void paging() {
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 10));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 10));
+        memberRepository.save(new Member("member5", 10));
+
+        int age = 10;
+        int offset = 0;
+        int limit = 3;
+
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+        //when
+        //Page<Member> page = memberRepository.findByAge(age, pageRequest);
+        Slice<Member> page = memberRepository.findByAgeSlice(age, pageRequest);
+
+        Slice<MemberDto> memberDtos = page.map(e -> new MemberDto(e.getId(), e.getUsername(), null));
+
+        //then
+        List<Member> content = page.getContent();
+      //  long totalCount = page.getTotalElements();
+        for (Member member : content) {
+            System.out.println("member = " + member);
+        }
+       // System.out.println("totalCount = " + totalCount);
+        assertThat(content.size()).isEqualTo(3);
+       // assertThat(totalCount).isEqualTo(5);
+        assertThat(page.getNumber()).isEqualTo(0);
+        //assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.isFirst()).isTrue();
+        assertThat(page.hasNext()).isTrue();
+    }
+
+    @Test
+    public void bulkUpdate() {
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 19));
+        memberRepository.save(new Member("member3", 20));
+        memberRepository.save(new Member("member4", 21));
+        memberRepository.save(new Member("member5", 40));
+
+        int resultCount = memberRepository.bulkAgePlus(20);
+
+//        em.flush();
+//        em.clear();
+
+        Member member5 = memberRepository.findMemberByUsername("member5");
+        System.out.println("member5 = " + member5);
+
+        assertThat(resultCount).isEqualTo(3);
+    }
+
+    @Test
+    public void findMemberLazy() throws Exception{
+        //Given
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member1", 10, teamB);
+
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();
+        em.clear();
+
+        //When N + 1
+        //select Member
+        List<Member> members = memberRepository.findEntityGraphByUsername("member1");//findAll();
+        for (Member member : members) {
+            System.out.println("member = " + member.getUsername());
+            //select Team
+            System.out.println("member.team = " + member.getTeam().getName());
+        }
+        //Then
     }
 }
