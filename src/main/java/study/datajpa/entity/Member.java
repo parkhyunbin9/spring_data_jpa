@@ -5,12 +5,15 @@ import lombok.*;
 import javax.persistence.*;
 
 @Entity
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "username", "age"}) //연관관계 필드는 무한루프에 빠질수 있으므로 toString 안하는게 좋다.
-public class Member {
+public class Member extends BaseEntity {
 
-    @Id @GeneratedValue
+
+    @Id
+    @GeneratedValue
     @Column(name = "member_id")
     private Long id;
 
